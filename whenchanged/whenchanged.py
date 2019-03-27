@@ -30,7 +30,7 @@ import os
 import re
 import time
 from datetime import datetime
-from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 try:
     import subprocess32 as subprocess
@@ -69,7 +69,7 @@ class WhenChanged(FileSystemEventHandler):
         self.verbose_mode = verbose_mode
         self.process_env = os.environ.copy()
 
-        self.observer = Observer(timeout=0.1)
+        self.observer = PollingObserver(timeout=0.1)
 
         for p in self.paths:
             if os.path.isdir(p):
@@ -126,10 +126,6 @@ class WhenChanged(FileSystemEventHandler):
             self.run_command(path)
 
     def on_created(self, event):
-        if self.observer.__class__.__name__ == 'InotifyObserver':
-            # inotify also generates modified events for created files
-            return
-
         if not event.is_directory:
             self.set_envvar('event', 'file_created')
             self.on_change(event.src_path)
