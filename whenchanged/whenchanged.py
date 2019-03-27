@@ -30,7 +30,7 @@ import os
 import re
 import time
 from datetime import datetime
-from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 try:
     import subprocess32 as subprocess
@@ -70,7 +70,7 @@ class WhenChanged(FileSystemEventHandler):
         self.process_env = os.environ.copy()
         self.last_event_type = ''
 
-        self.observer = Observer(timeout=0.1)
+        self.observer = PollingObserver(timeout=0.1)
 
         for p in self.paths:
             if os.path.isdir(p):
