@@ -81,7 +81,7 @@ class WhenChanged(FileSystemEventHandler):
                 self.observer.schedule(self, p)
 
 
-    def run_command(self, thefile):
+    def run_command(self, thefile, event = None):
         if self.run_once:
             if os.path.exists(thefile) and os.path.getmtime(thefile) < self.last_run:
                 return
@@ -90,15 +90,20 @@ class WhenChanged(FileSystemEventHandler):
             new_command.append(item.replace('%f', thefile))
         now = datetime.now()
         print_message = ''
+
+        # target_type may evolve to: target_type = 'directory' if event.is_directory else 'file'
+        target_type = 'file'
+        self.set_envvar('event', target_type + '_' + event.event_type)
+        self.set_envvar(target_type, thefile)
+
         if self.verbose_mode > 0:
-            print_message = "'" + thefile + "' " + re.sub(r'^[^_]+_', '', self.get_envvar('event'))
+            print_message = "'" + thefile + "' " + event.event_type
         if self.verbose_mode > 1:
             print_message += ' at ' + now.strftime('%F %T')
         if self.verbose_mode > 2:
             print_message += '.' + now.strftime('%f') + ", running '" + ' '.join(self.command) + "'"
         if print_message:
             print('==> ' + print_message + ' <==')
-        self.set_envvar('file', thefile)
         subprocess.call(new_command, shell=(len(new_command) == 1), env=self.process_env)
         self.last_run = time.time()
 
@@ -121,29 +126,25 @@ class WhenChanged(FileSystemEventHandler):
 
         return False
 
-    def on_change(self, path):
+    def on_change(self, path, event = None):
         if self.is_interested(path):
-            self.run_command(path)
+            self.run_command(path, event)
 
     def on_created(self, event):
         if not event.is_directory:
-            self.set_envvar('event', 'file_created')
-            self.on_change(event.src_path)
+            self.on_change(event.src_path, event)
 
     def on_modified(self, event):
         if not event.is_directory:
-            self.set_envvar('event', 'file_modified')
-            self.on_change(event.src_path)
+            self.on_change(event.src_path, event)
 
     def on_moved(self, event):
         if not event.is_directory:
-            self.set_envvar('event', 'file_moved')
-            self.on_change(event.dest_path)
+            self.on_change(event.dest_path, event)
 
     def on_deleted(self, event):
         if not event.is_directory:
-            self.set_envvar('event', 'file_deleted')
-            self.on_change(event.src_path)
+            self.on_change(event.src_path, event)
 
     def set_envvar(self, name, value):
         self.process_env['WHEN_CHANGED_' + name.upper()] = value
