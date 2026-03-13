@@ -51,7 +51,7 @@ class WhenChanged(FileSystemEventHandler):
         # file creation test file 4913
         r'4913$',
         # backup files
-        r'.~$',
+        r'\.~$',
         # git directories
         r'\.git/?',
         # __pycache__ directories
