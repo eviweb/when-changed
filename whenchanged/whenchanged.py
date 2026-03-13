@@ -86,8 +86,9 @@ class WhenChanged(FileSystemEventHandler):
 
     def run_command(self, thefile):
         if self.run_once:
-            if os.path.exists(thefile) and os.path.getmtime(thefile) < self.last_run:
+            if os.path.exists(thefile) and os.path.getmtime(thefile) <= self.last_run:
                 return
+        self.last_run = time.time()
         new_command = []
         for item in self.command:
             new_command.append(item.replace('%f', thefile))
@@ -104,7 +105,6 @@ class WhenChanged(FileSystemEventHandler):
         self.set_envvar('file', thefile)
         stdout = open(os.devnull, 'wb') if self.quiet_mode else None
         subprocess.call(new_command, shell=(len(new_command) == 1), env=self.process_env, stdout=stdout)
-        self.last_run = time.time()
 
     def is_interested(self, path):
         if self.exclude.match(path):
