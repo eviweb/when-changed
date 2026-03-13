@@ -1,6 +1,5 @@
 # when-changed: Run a command when a file is changed
 
-
 ### What is it?
 
 Tired of switching to the shell to test the changes you just made to
@@ -13,23 +12,21 @@ changed the file, when-changed runs any command you specify.
 So to generate your latex resume automatically, you can do this:
 
 ```sh
-$ when-changed CV.tex pdflatex CV.tex
+$ when-changed CV.tex pdflatex CV.tex
 ```
 
 Sweetness!
 
-
 ### What do I need?
 
-- Python 2.6+
+- Python 3.6+
 - watchdog
 
-
 ### Installation
-```sh
-pipx install https://github.com/joh/when-changed/archive/master.zip
-```
 
+```sh
+pipx install https://github.com/eviweb/when-changed/archive/master.zip
+```
 
 ### Usage
 
@@ -38,26 +35,39 @@ when-changed [OPTION] FILE COMMAND...
 when-changed [OPTION] FILE [FILE ...] -c COMMAND
 ```
 
-FILE can be a directory. Use %f to pass the filename to the command.
+FILE can be a directory. Use `%f` to pass the filename to the command.
 
 **Options:**
 
-- -r Watch recursively
-- -v Verbose output. Multiple -v options increase the verbosity. The maximum is 3: -vvv.
-- -1 Don't re-run command if files changed while command was running
-- -s Run command immediately at start
-- -q Run command quietly
+- `-r` Watch recursively
+- `-v` Verbose output. Multiple -v options increase the verbosity. The maximum is 3: `-vvv`.
+- `-1` Don't re-run command if files changed while command was running
+- `-s` Run command immediately at start
+- `-q` Run command quietly
+- `-k` Kill the running command before restarting it (useful for long-running processes)
+- `-d DELAY` Debounce: wait DELAY seconds before running, coalescing rapid changes into a single run
 
-### Environment variables:
+### Environment variables
 
 when-changed provides the following environment variables:
 
-- WHEN_CHANGED_EVENT: reflects the current event type that occurs.
-Could be either:
-  - file_created
-  - file_modified
-  - file_moved
-  - file_deleted
+- `WHEN_CHANGED_EVENT`: reflects the current event type that occurs. Could be either:
+  - `file_created`
+  - `file_modified`
+  - `file_moved`
+  - `file_deleted`
+- `WHEN_CHANGED_FILE`: provides the full path of the file that has generated the event.
 
-- WHEN_CHANGED_FILE: provides the full path of the file that has generated the event.
+### Examples
 
+Restart a server when source files change, killing the previous instance:
+
+```sh
+$ when-changed -k -r src/ python server.py
+```
+
+Debounce rapid changes (e.g. formatter touching many files at once):
+
+```sh
+$ when-changed -d 0.5 -r src/ make test
+```
