@@ -70,6 +70,7 @@ class WhenChanged(FileSystemEventHandler):
         self.verbose_mode = verbose_mode
         self.quiet_mode = quiet_mode
         self.process_env = os.environ.copy()
+        self._recently_created = set()
 
         self.observer = Observer(timeout=0.1)
 
