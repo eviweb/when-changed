@@ -44,7 +44,7 @@ class WhenChanged(FileSystemEventHandler):
     # files to exclude from being watched
     exclude = re.compile(r'|'.join(r'(.+/)?'+ a for a in [
         # Vim swap files
-        r'\..*\.sw[px]*$',
+        r'\..*\.sw[a-z]$',
         # file creation test file 4913
         r'4913$',
         # backup files
