@@ -13,6 +13,8 @@ Options:
 -1 Don't re-run command if files changed while command was running
 -s Run command immediately at start
 -q Run command quietly
+-k Kill the running command before restarting it
+-d DELAY Debounce: wait DELAY seconds before running (default: 0)
 
 Environment variables:
 - WHEN_CHANGED_EVENT: reflects the current event type that occurs.
@@ -30,6 +32,7 @@ import sys
 import os
 import re
 import time
+import threading
 from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -56,7 +59,8 @@ class WhenChanged(FileSystemEventHandler):
         ]))
 
     def __init__(self, files, command, recursive=False, run_once=False,
-                 run_at_start=False, verbose_mode=0, quiet_mode=False):
+                 run_at_start=False, verbose_mode=0, quiet_mode=False,
+                 kill_mode=False, debounce_delay=0):
         self.files = files
         paths = {}
         for f in files:
@@ -71,6 +75,11 @@ class WhenChanged(FileSystemEventHandler):
         self.quiet_mode = quiet_mode
         self.process_env = os.environ.copy()
         self._recently_created = set()
+        self.kill_mode = kill_mode
+        self.debounce_delay = debounce_delay
+        self._current_process = None
+        self._debounce_timer = None
+        self._lock = threading.Lock()
 
         self.observer = Observer(timeout=0.1)
 
@@ -104,7 +113,16 @@ class WhenChanged(FileSystemEventHandler):
             print('==> ' + print_message + ' <==')
         self.set_envvar('file', thefile)
         stdout = open(os.devnull, 'wb') if self.quiet_mode else None
-        subprocess.call(new_command, shell=(len(new_command) == 1), env=self.process_env, stdout=stdout)
+        if self.kill_mode and self._current_process is not None:
+            self._current_process.terminate()
+            try:
+                self._current_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._current_process.kill()
+        self._current_process = subprocess.Popen(
+            new_command, shell=(len(new_command) == 1),
+            env=self.process_env, stdout=stdout)
+        self._current_process.wait()
 
     def is_interested(self, path):
         if self.exclude.match(path):
@@ -127,7 +145,15 @@ class WhenChanged(FileSystemEventHandler):
 
     def on_change(self, path):
         if self.is_interested(path):
-            self.run_command(path)
+            if self.debounce_delay > 0:
+                with self._lock:
+                    if self._debounce_timer is not None:
+                        self._debounce_timer.cancel()
+                    self._debounce_timer = threading.Timer(
+                        self.debounce_delay, self.run_command, args=[path])
+                    self._debounce_timer.start()
+            else:
+                self.run_command(path)
 
     def on_created(self, event):
         if not event.is_directory:
@@ -192,6 +218,8 @@ def main():
     run_once = False
     run_at_start = False
     quiet_mode = False
+    kill_mode = False
+    debounce_delay = 0
 
     while args and args[0][0] == '-':
         flag = args.pop(0)
@@ -212,6 +240,15 @@ def main():
             args = []
         elif flag == '-q':
             quiet_mode = True
+        elif flag == '-k':
+            kill_mode = True
+        elif flag == '-d':
+            if args:
+                try:
+                    debounce_delay = float(args.pop(0))
+                except ValueError:
+                    print('Error: -d requires a numeric delay in seconds')
+                    exit(1)
         else:
             break
 
@@ -240,7 +277,7 @@ def main():
             print("When '%s' changes, run '%s'" % (files[0], print_command))
 
     wc = WhenChanged(files, command, recursive, run_once, run_at_start,
-                     verbose_mode, quiet_mode)
+                     verbose_mode, quiet_mode, kill_mode, debounce_delay)
 
     try:
         wc.run()
