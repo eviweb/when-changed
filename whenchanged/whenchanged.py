@@ -74,7 +74,7 @@ class WhenChanged(FileSystemEventHandler):
         self.verbose_mode = verbose_mode
         self.quiet_mode = quiet_mode
         self.process_env = os.environ.copy()
-        self._recently_created = set()
+        self._recently_created = {}
         self.kill_mode = kill_mode
         self.debounce_delay = debounce_delay
         self._current_process = None
@@ -158,13 +158,18 @@ class WhenChanged(FileSystemEventHandler):
     def on_created(self, event):
         if not event.is_directory:
             self.set_envvar('event', 'file_created')
-            self._recently_created.add(event.src_path)
+            self._recently_created[event.src_path] = time.time()
             self.on_change(event.src_path)
 
     def on_modified(self, event):
         if not event.is_directory:
+            now = time.time()
+            self._recently_created = {
+                p: t for p, t in self._recently_created.items()
+                if now - t < 1.0
+            }
             if event.src_path in self._recently_created:
-                self._recently_created.discard(event.src_path)
+                del self._recently_created[event.src_path]
                 return
             self.set_envvar('event', 'file_modified')
             self.on_change(event.src_path)
