@@ -129,16 +129,16 @@ class WhenChanged(FileSystemEventHandler):
             self.run_command(path)
 
     def on_created(self, event):
-        if self.observer.__class__.__name__ == 'InotifyObserver':
-            # inotify also generates modified events for created files
-            return
-
         if not event.is_directory:
             self.set_envvar('event', 'file_created')
+            self._recently_created.add(event.src_path)
             self.on_change(event.src_path)
 
     def on_modified(self, event):
         if not event.is_directory:
+            if event.src_path in self._recently_created:
+                self._recently_created.discard(event.src_path)
+                return
             self.set_envvar('event', 'file_modified')
             self.on_change(event.src_path)
 
