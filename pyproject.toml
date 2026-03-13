@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "when-changed"
+version = "0.3.0"
+description = "Run a command when a file is changed"
+readme = "README.md"
+license = { text = "BSD" }
+authors = [{ name = "Johannes H. Jensen", email = "joh@pseudoberries.com" }]
+requires-python = ">=3.6"
+dependencies = ["watchdog"]
+
+[project.urls]
+Homepage = "https://github.com/joh/when-changed"
+
+[project.scripts]
+when-changed = "whenchanged.whenchanged:main"
