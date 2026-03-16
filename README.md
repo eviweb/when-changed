@@ -46,6 +46,7 @@ FILE can be a directory. Use `%f` to pass the filename to the command.
 - `-q` Run command quietly
 - `-k` Kill the running command before restarting it (useful for long-running processes)
 - `-d DELAY` Debounce: wait DELAY seconds before running, coalescing rapid changes into a single run
+- `-p PATTERN` Only react to files matching PATTERN (glob, e.g. `*.py`). Can be repeated for multiple patterns.
 
 ### Environment variables
 
@@ -70,4 +71,10 @@ Debounce rapid changes (e.g. formatter touching many files at once):
 
 ```sh
 $ when-changed -d 0.5 -r src/ make test
+```
+
+Watch only Python and YAML files in a directory:
+
+```sh
+$ when-changed -r -p '*.py' -p '*.yml' src/ make lint
 ```
