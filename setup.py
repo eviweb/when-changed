@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='when-changed',
-    version='0.4.0',
+    version='0.5.0',
     description='Run a command when a file is changed',
     author='Johannes H. Jensen',
     author_email='joh@pseudoberries.com',
