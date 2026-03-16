@@ -20,6 +20,7 @@ def make_wc(files, **kwargs):
         paths[os.path.realpath(f)] = f
     wc.paths = paths
     wc.recursive = kwargs.get('recursive', False)
+    wc.patterns = kwargs.get('patterns', [])
     wc.exclude = WhenChanged.exclude
     return wc
 

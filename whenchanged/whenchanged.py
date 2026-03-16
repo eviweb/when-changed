@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """%(prog)s - run a command when a file is changed
 
-Usage: %(prog)s [-vr1s] FILE COMMAND...
-       %(prog)s [-vr1s] FILE [FILE ...] -c COMMAND
+Usage: %(prog)s [OPTIONS] FILE COMMAND...
+       %(prog)s [OPTIONS] FILE [FILE ...] -c COMMAND
 
 FILE can be a directory. Use %%f to pass the filename to the command.
 
@@ -15,6 +15,8 @@ Options:
 -q Run command quietly
 -k Kill the running command before restarting it
 -d DELAY Debounce: wait DELAY seconds before running (default: 0)
+-p PATTERN Only react to files matching PATTERN (glob, e.g. *.py).
+           Can be specified multiple times.
 
 Environment variables:
 - WHEN_CHANGED_EVENT: reflects the current event type that occurs.
@@ -31,6 +33,7 @@ from __future__ import print_function
 import sys
 import os
 import re
+import fnmatch
 import time
 import threading
 from datetime import datetime
@@ -60,7 +63,7 @@ class WhenChanged(FileSystemEventHandler):
 
     def __init__(self, files, command, recursive=False, run_once=False,
                  run_at_start=False, verbose_mode=0, quiet_mode=False,
-                 kill_mode=False, debounce_delay=0):
+                 kill_mode=False, debounce_delay=0, patterns=None):
         self.files = files
         paths = {}
         for f in files:
@@ -77,6 +80,7 @@ class WhenChanged(FileSystemEventHandler):
         self._recently_created = {}
         self.kill_mode = kill_mode
         self.debounce_delay = debounce_delay
+        self.patterns = patterns or []
         self._current_process = None
         self._debounce_timer = None
         self._lock = threading.Lock()
@@ -124,8 +128,19 @@ class WhenChanged(FileSystemEventHandler):
             env=self.process_env, stdout=stdout)
         self._current_process.wait()
 
+    def matches_patterns(self, path):
+        """Return True if path matches any of the watched patterns, or if no
+        patterns are defined (watch everything)."""
+        if not self.patterns:
+            return True
+        name = os.path.basename(path)
+        return any(fnmatch.fnmatch(name, p) for p in self.patterns)
+
     def is_interested(self, path):
         if self.exclude.match(path):
+            return False
+
+        if not self.matches_patterns(path):
             return False
 
         if path in self.paths:
@@ -225,6 +240,7 @@ def main():
     quiet_mode = False
     kill_mode = False
     debounce_delay = 0
+    patterns = []
 
     while args and args[0][0] == '-':
         flag = args.pop(0)
@@ -254,6 +270,9 @@ def main():
                 except ValueError:
                     print('Error: -d requires a numeric delay in seconds')
                     exit(1)
+        elif flag == '-p':
+            if args:
+                patterns.append(args.pop(0))
         else:
             break
 
@@ -282,7 +301,8 @@ def main():
             print("When '%s' changes, run '%s'" % (files[0], print_command))
 
     wc = WhenChanged(files, command, recursive, run_once, run_at_start,
-                     verbose_mode, quiet_mode, kill_mode, debounce_delay)
+                     verbose_mode, quiet_mode, kill_mode, debounce_delay,
+                     patterns)
 
     try:
         wc.run()

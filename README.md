@@ -13,7 +13,7 @@ changed the file, when-changed runs any command you specify.
 So to generate your latex resume automatically, you can do this:
 
 ```sh
-$ when-changed CV.tex pdflatex CV.tex
+$ when-changed CV.tex pdflatex CV.tex
 ```
 
 Sweetness!
@@ -47,6 +47,9 @@ FILE can be a directory. Use %f to pass the filename to the command.
 - -1 Don't re-run command if files changed while command was running
 - -s Run command immediately at start
 - -q Run command quietly
+- -k Kill the running command before restarting it (useful for long-running processes)
+- -d DELAY Debounce: wait DELAY seconds before running, coalescing rapid changes into a single run
+- -p PATTERN Only react to files matching PATTERN (glob, e.g. *.py). Can be repeated for multiple patterns.
 
 ### Environment variables:
 
@@ -61,3 +64,22 @@ Could be either:
 
 - WHEN_CHANGED_FILE: provides the full path of the file that has generated the event.
 
+### Examples
+
+Restart a server when source files change, killing the previous instance:
+
+```sh
+$ when-changed -k -r src/ python server.py
+```
+
+Debounce rapid changes (e.g. formatter touching many files at once):
+
+```sh
+$ when-changed -d 0.5 -r src/ make test
+```
+
+Watch only Python and YAML files in a directory:
+
+```sh
+$ when-changed -r -p '*.py' -p '*.yml' src/ make lint
+```
